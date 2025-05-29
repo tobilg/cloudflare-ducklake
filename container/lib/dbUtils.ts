@@ -1,4 +1,4 @@
-import { DuckDBConnection, DuckDBInstance, DuckDBValue } from '@duckdb/node-api';
+import { type DuckDBConnection, DuckDBInstance, type DuckDBValue } from '@duckdb/node-api';
 import { filterQuery } from './queryFilter';
 
 export const createConnection = async () => {
@@ -9,52 +9,79 @@ export const createConnection = async () => {
   const connection = await duckDB.connect();
 
   return connection;
-}
+};
 
-export const query = async (connection: DuckDBConnection, query: string, filteringEnabled = true): Promise<Record<string, DuckDBValue>[]> => {
+export const query = async (
+  connection: DuckDBConnection,
+  query: string,
+  filteringEnabled = true,
+): Promise<Record<string, DuckDBValue>[]> => {
   const reader = await connection.runAndReadAll(filterQuery(query, filteringEnabled));
   return reader.getRowObjects();
-}
+};
 
 export const initialize = async (connection: DuckDBConnection) => {
   // Load home directory
-  await query(connection, `SET home_directory='/tmp';`, false);
-
-  await query(connection, 'INSTALL \'/app/extensions/httpfs.duckdb_extension\';', false);
-  await query(connection, 'LOAD \'/app/extensions/httpfs.duckdb_extension\';', false);
-
-  await query(connection, 'INSTALL \'/app/extensions/iceberg.duckdb_extension\';', false);
-  await query(connection, 'LOAD \'/app/extensions/iceberg.duckdb_extension\';', false); 
-
+  await query(connection, "SET home_directory='/tmp';", false);
+  // Load httpfs
+  await query(connection, "INSTALL '/app/extensions/httpfs.duckdb_extension';", false);
+  await query(connection, "LOAD '/app/extensions/httpfs.duckdb_extension';", false);
+  // Load iceberg
+  await query(connection, "INSTALL '/app/extensions/iceberg.duckdb_extension';", false);
+  await query(connection, "LOAD '/app/extensions/iceberg.duckdb_extension';", false);
   // Load ducklake
-  await query(connection, 'INSTALL \'/app/extensions/ducklake.duckdb_extension\';', false);
-  await query(connection, 'LOAD \'/app/extensions/ducklake.duckdb_extension\';', false);
+  await query(connection, "INSTALL '/app/extensions/ducklake.duckdb_extension';", false);
+  await query(connection, "LOAD '/app/extensions/ducklake.duckdb_extension';", false);
+  // Load nanoarrow
+  await query(connection, "INSTALL '/app/extensions/nanoarrow.duckdb_extension';", false);
+  await query(connection, "LOAD '/app/extensions/nanoarrow.duckdb_extension';", false);
   // Load postgres
-  await query(connection, 'INSTALL \'/app/extensions/postgres_scanner.duckdb_extension\';', false);
-  await query(connection, 'LOAD \'/app/extensions/postgres_scanner.duckdb_extension\';', false);
+  await query(connection, "INSTALL '/app/extensions/postgres_scanner.duckdb_extension';", false);
+  await query(connection, "LOAD '/app/extensions/postgres_scanner.duckdb_extension';", false);
 
   // Create R2 Data Catalog secret if env vars are set, and attach catalog
   if (process.env.R2_TOKEN && process.env.R2_ENDPOINT && process.env.R2_CATALOG) {
     // Create secrets
-    await query(connection, `CREATE OR REPLACE SECRET r2_catalog_secret (TYPE ICEBERG, TOKEN '${process.env.R2_TOKEN}', ENDPOINT '${process.env.R2_ENDPOINT}');`, false);
+    await query(
+      connection,
+      `CREATE OR REPLACE SECRET r2_catalog_secret (TYPE ICEBERG, TOKEN '${process.env.R2_TOKEN}', ENDPOINT '${process.env.R2_ENDPOINT}');`,
+      false,
+    );
     // Attach catalog
-    await query(connection, `ATTACH '${process.env.R2_CATALOG}' AS r2_datalake (TYPE ICEBERG, ENDPOINT '${process.env.R2_ENDPOINT}');`, false);
+    await query(
+      connection,
+      `ATTACH '${process.env.R2_CATALOG}' AS r2lake (TYPE ICEBERG, ENDPOINT '${process.env.R2_ENDPOINT}');`,
+      false,
+    );
+
+    console.log('Done initializing Iceberg');
   }
-  
-  // Create R2 secret if env vars are set
-  if (process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_ACCOUNT_ID) {
+
+  // Create R2 secret & attach DuckLake if env vars are set
+  if (
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY &&
+    process.env.R2_ACCOUNT_ID &&
+    process.env.R2_BUCKET &&
+    process.env.POSTGRES_DB &&
+    process.env.POSTGRES_HOST &&
+    process.env.POSTGRES_USER &&
+    process.env.POSTGRES_PASSWORD
+  ) {
     // Create secret
-    await query(connection, `CREATE OR REPLACE SECRET r2 (TYPE R2, KEY_ID '${process.env.R2_ACCESS_KEY_ID}', SECRET '${process.env.R2_SECRET_ACCESS_KEY}', ACCOUNT_ID '${process.env.R2_ACCOUNT_ID}');`, false);
+    await query(
+      connection,
+      `CREATE OR REPLACE SECRET r2 (TYPE R2, KEY_ID '${process.env.R2_ACCESS_KEY_ID}', SECRET '${process.env.R2_SECRET_ACCESS_KEY}', ACCOUNT_ID '${process.env.R2_ACCOUNT_ID}');`,
+      false,
+    );
     // Attach remote Postgres
-    await query(connection, `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://ducklake-bucket/data');`, false);
-    await query(connection, `USE ducklake;`, false);
-    // Lock the local file system, because using R2 for storage
-    await query(connection, `SET disabled_filesystems = 'LocalFileSystem';`, false);
-  } else {
-    // Attach remote Postgres
-    await query(connection, `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH '/app/data');`, false);
-    await query(connection, `USE ducklake;`, false);
-    // Can't lock the local file system because using container-local storage, so ignored
+    await query(
+      connection,
+      `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://${process.env.R2_BUCKET}/data');`,
+      false,
+    );
+
+    console.log('Done initializing DuckLake');
   }
 
   // Whether or not the global http metadata is used to cache HTTP metadata, see https://github.com/duckdb/duckdb/pull/5405
@@ -66,8 +93,11 @@ export const initialize = async (connection: DuckDBConnection) => {
   // Whether or not version guessing is enabled
   await query(connection, 'SET unsafe_enable_version_guessing=true;', false);
 
-  // Lock the configuration
-  await query(connection, `SET lock_configuration=true;`, false);
+  // Lock the local file system, because using R2 for storage
+  await query(connection, "SET disabled_filesystems = 'LocalFileSystem';", false);
 
-  console.log('DuckDB initialized');
+  // Lock the configuration
+  await query(connection, 'SET lock_configuration=true;', false);
+
+  console.log('Done initializing DuckDB');
 };

@@ -1,11 +1,12 @@
+import type { DuckDBConnection } from '@duckdb/node-api';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { bearerAuth } from 'hono/bearer-auth';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
-import { bearerAuth } from 'hono/bearer-auth';
+import { stream } from 'hono/streaming';
 import { createConnection, initialize, query } from './lib/dbUtils';
-import { DuckDBConnection } from '@duckdb/node-api';
 
 // Setup bindings
 type Bindings = {
@@ -42,16 +43,14 @@ api.notFound((c) => c.json({ message: 'Not Found', ok: false }, 404));
 // // Enable basic auth if username & password are set
 if (API_TOKEN) {
   api.use('/query', bearerAuth({ token: API_TOKEN }));
-  api.use('/streaming-query', bearerAuth({ token: API_TOKEN }));
 }
 
 // Setup query route
 api.post('/query', async (c) => {
-
   // Parse body with query
   const body = await c.req.json();
 
-  if (!body.hasOwnProperty('query')) {
+  if (!Object.keys(body).includes('query')) {
     return c.json({ error: 'Missing query property in request body!' }, 400);
   }
 
@@ -73,30 +72,36 @@ api.post('/query', async (c) => {
     const queryResult = await query(connection, body.query);
 
     return c.json(queryResult, 200);
-  } catch (error) {
-    console.error(error);
-    return c.json({ error: error }, 500);
+  } catch (error: any) {
+    console.error(JSON.stringify(error, null, 2));
+    return c.json(
+      { error: error?.message.replace(/\n/g, ' ').replace(/\"/g, "'").replace('^', '').trim() || 'Unknown error' },
+      500,
+    );
   }
 });
 
 // Serve API
-const server = serve({
-  fetch: api.fetch,
-  port,
-  }, (info) => {
-  console.log(`Listening on http://localhost:${info.port}`);
-});
+const server = serve(
+  {
+    fetch: api.fetch,
+    port,
+  },
+  (info) => {
+    console.log(`Listening on http://localhost:${info.port}`);
+  },
+);
 
 // graceful shutdown
-process.on("SIGINT", () => {
-  server.close()
-  process.exit(0)
+process.on('SIGINT', () => {
+  server.close();
+  process.exit(0);
 });
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   server.close((err) => {
     if (err) {
-      console.error(err)
+      console.error(err);
       process.exit(1);
     }
     process.exit(0);

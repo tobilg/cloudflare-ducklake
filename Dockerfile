@@ -13,8 +13,7 @@ COPY container/tsconfig.json .
 COPY container/ src/
 
 RUN npm run build && \
-    npm prune --production && \
-    mkdir -p /app/data
+    npm prune --production
 
 FROM node:20-bookworm-slim
 RUN addgroup --system --gid 1001 nodejs

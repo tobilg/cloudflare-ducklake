@@ -1,22 +1,26 @@
 {
-	"name": "cloudflare-ducklake",
-	"version": "0.1.0",
-	"scripts": {
-		"build": "rm -rf dist/ && tsc",
-		"build:docker": "docker buildx build --platform linux/amd64 -t tobilg/cloudflare-ducklake .",
-		"deploy": "npx wrangler deploy",
-		"dev": "npx wrangler dev",
-		"dev:docker": "docker run --rm -it --env-file ./.dev.vars -p 8080:3000 tobilg/cloudflare-ducklake",
-		"start": "npx wrangler dev",
-		"cf-typegen": "npx wrangler types"
-	},
-	"devDependencies": {
-		"@types/node": "^22.15.21",
-		"typescript": "^5.8.3"
-	},
-	"dependencies": {
-		"@duckdb/node-api": "^1.3.0-alpha.21",
-		"@hono/node-server": "^1.14.3",
-		"hono": "^4.7.10"
-	}
+  "name": "cloudflare-ducklake",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc",
+    "build:docker": "docker buildx build --platform linux/amd64 -t tobilg/cloudflare-ducklake .",
+    "deploy": "npx wrangler deploy",
+    "dev": "npx wrangler dev",
+    "dev:docker": "docker run --rm -it --env-file ./.dev.vars -p 8080:3000 tobilg/cloudflare-ducklake",
+    "start": "npx wrangler dev",
+    "cf-typegen": "npx wrangler types",
+    "lint": "biome check src/ container/",
+    "lint:fix": "biome check . --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20250529.0",
+    "@duckdb/node-api": "^1.3.0-alpha.21",
+    "@hono/node-server": "^1.14.3",
+    "hono": "^4.7.10"
+  }
 }

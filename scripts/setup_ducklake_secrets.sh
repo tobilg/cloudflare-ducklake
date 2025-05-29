@@ -1,16 +1,8 @@
 #!/bin/bash
 
-# Create a secret for the R2 token
-echo "Now setting up R2_TOKEN..."
-wrangler secret put R2_TOKEN
-
-# Create a secret for the R2 endpoint
-echo "Now setting up R2_ENDPOINT..."
-wrangler secret put R2_ENDPOINT
-
-# Create a secret for the R2 catalog
-echo "Now setting up R2_CATALOG..."
-wrangler secret put R2_CATALOG
+# Create a secret for the R2 bucket name
+echo "Now setting up R2_BUCKET..."
+wrangler secret put R2_BUCKET
 
 # Create a secret for the R2 access key ID
 echo "Now setting up R2_ACCESS_KEY_ID..."
@@ -35,10 +27,6 @@ wrangler secret put POSTGRES_PASSWORD
 # Create a secret for the Postgres host
 echo "Now setting up POSTGRES_HOST..."
 wrangler secret put POSTGRES_HOST
-
-# Create a secret for the Postgres port
-echo "Now setting up POSTGRES_PORT..."
-wrangler secret put POSTGRES_PORT
 
 # Create a secret for the Postgres database
 echo "Now setting up POSTGRES_DB..."

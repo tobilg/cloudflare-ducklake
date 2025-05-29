@@ -8,10 +8,10 @@ interface EnvWithCustomVariables extends Env {
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
   R2_ACCOUNT_ID: string;
+  R2_BUCKET: string;
   POSTGRES_USER: string;
   POSTGRES_PASSWORD: string;
   POSTGRES_HOST: string;
-  POSTGRES_PORT: string;
   POSTGRES_DB: string;
 }
 
@@ -25,42 +25,47 @@ export class Container extends DurableObject<EnvWithCustomVariables> {
     void this.ctx.blockConcurrencyWhile(async () => {
       const containerConfig: ContainerStartupOptions = {
         enableInternet: true,
-      }
+      };
       // Add API token if provided
       if (this.env.API_TOKEN) {
         containerConfig.env = {
-          API_TOKEN: this.env.API_TOKEN
-        }
+          API_TOKEN: this.env.API_TOKEN,
+        };
       }
-      // Add R2 Data Catalog credentials if provided
+      // Add R2 Data Catalog credentials if provided -> For Iceberg to work
       if (this.env.R2_TOKEN && this.env.R2_ENDPOINT && this.env.R2_CATALOG) {
         containerConfig.env = {
           R2_TOKEN: this.env.R2_TOKEN,
           R2_ENDPOINT: this.env.R2_ENDPOINT,
-          R2_CATALOG: this.env.R2_CATALOG
-        }
+          R2_CATALOG: this.env.R2_CATALOG,
+        };
       }
-      // Add R2 credentials if provided
-      if (this.env.R2_ACCESS_KEY_ID && this.env.R2_SECRET_ACCESS_KEY && this.env.R2_ACCOUNT_ID) {
+      // Add Postgres & R2 credentials if provided -> For DuckLake to work
+      // Hint: Port is not needed because it's using the default port 5432
+      if (
+        this.env.R2_ACCESS_KEY_ID &&
+        this.env.R2_SECRET_ACCESS_KEY &&
+        this.env.R2_ACCOUNT_ID &&
+        this.env.R2_BUCKET &&
+        this.env.POSTGRES_USER &&
+        this.env.POSTGRES_PASSWORD &&
+        this.env.POSTGRES_HOST &&
+        this.env.POSTGRES_DB
+      ) {
         containerConfig.env = {
           R2_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID,
           R2_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY,
-          R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID
-        }
-      }
-      // Add Postgres credentials if provided
-      if (this.env.POSTGRES_USER && this.env.POSTGRES_PASSWORD && this.env.POSTGRES_HOST && this.env.POSTGRES_PORT && this.env.POSTGRES_DB) {
-        containerConfig.env = {
+          R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID,
+          R2_BUCKET: this.env.R2_BUCKET,
           POSTGRES_USER: this.env.POSTGRES_USER,
           POSTGRES_PASSWORD: this.env.POSTGRES_PASSWORD,
           POSTGRES_HOST: this.env.POSTGRES_HOST,
-          POSTGRES_PORT: this.env.POSTGRES_PORT,
-          POSTGRES_DB: this.env.POSTGRES_DB
-        }
+          POSTGRES_DB: this.env.POSTGRES_DB,
+        };
       }
       // Start container
       if (!this.container.running) this.container.start(containerConfig);
-      this.monitor = this.container.monitor().then(() => console.log('Container exited?'));
+      this.monitor = this.container.monitor().then(() => ctx.abort()); // Will retrigger the constructor once a DO alarm runs or a request arrives
     });
   }
 

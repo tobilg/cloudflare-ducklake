@@ -1,0 +1,35 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "cloudflare-ducklake",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-05-13",
+	"migrations": [
+		{
+			"new_sqlite_classes": [
+				"Container",
+			],
+			"tag": "v1"
+		}
+	],
+	"containers": [{
+		"name": "cloudflare-ducklake",
+		"image": "./Dockerfile",
+		"class_name": "Container",
+		"max_instances": 2,
+		"configuration": {
+			"memory": "4GB",
+      "vcpu": 2
+		}
+	}],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Container",
+				"name": "CONTAINER"
+			},
+		]
+	},
+	"observability": {
+		"enabled": true
+	}
+}

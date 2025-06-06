@@ -1,7 +1,10 @@
 {
   "name": "cloudflare-ducklake",
+  "compatibility_date": "2025-06-06",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "main": "src/index.ts",
-  "compatibility_date": "2025-05-29",
   "preview_urls": false,
   "migrations": [
     {
@@ -13,7 +16,7 @@
     {
       "name": "cloudflare-ducklake",
       "image": "./Dockerfile",
-      "class_name": "Container",
+      "class_name": "DuckDBContainer",
       "max_instances": 2,
       "configuration": {
         "memory": "4GB",
@@ -24,8 +27,9 @@
   "durable_objects": {
     "bindings": [
       {
-        "class_name": "Container",
-        "name": "CONTAINER"
+        "class_name": "DuckDBContainer",
+        "name": "CONTAINER",
+        "script_name": "src/index.ts"
       }
     ]
   },

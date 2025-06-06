@@ -5,7 +5,6 @@ import { bearerAuth } from 'hono/bearer-auth';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
-import { stream } from 'hono/streaming';
 import { createConnection, initialize, query } from './lib/dbUtils';
 
 // Setup bindings

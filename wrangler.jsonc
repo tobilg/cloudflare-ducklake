@@ -16,7 +16,7 @@
     {
       "name": "cloudflare-ducklake",
       "image": "./Dockerfile",
-      "class_name": "DuckDBContainer",
+      "class_name": "Container",
       "max_instances": 2,
       "configuration": {
         "memory": "4GB",
@@ -27,9 +27,8 @@
   "durable_objects": {
     "bindings": [
       {
-        "class_name": "DuckDBContainer",
-        "name": "CONTAINER",
-        "script_name": "src/index.ts"
+        "class_name": "Container",
+        "name": "CONTAINER"
       }
     ]
   },

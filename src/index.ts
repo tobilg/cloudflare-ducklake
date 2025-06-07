@@ -1,7 +1,22 @@
-import { Container } from '@cloudflare/containers';
+import { Container as PkgContainer } from '@cloudflare/containers';
 
-export default class DuckDBContainer extends Container {
-  constructor(ctx: any, env: any) {
+interface EnvWithCustomVariables extends Env {
+  API_TOKEN: string;
+  R2_TOKEN: string;
+  R2_ENDPOINT: string;
+  R2_CATALOG: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_ACCOUNT_ID: string;
+  R2_BUCKET: string;
+  POSTGRES_USER: string;
+  POSTGRES_PASSWORD: string;
+  POSTGRES_HOST: string;
+  POSTGRES_DB: string;
+}
+
+export class Container extends PkgContainer<EnvWithCustomVariables> {
+  constructor(ctx: any, env: EnvWithCustomVariables) {
     super(ctx, env);
 
     let envConfig: Record<string, string> = {};
@@ -50,26 +65,35 @@ export default class DuckDBContainer extends Container {
     this.defaultPort = 3000;
     this.sleepAfter = "1m";
     this.enableInternet = true;
-    this.env = envConfig;
-  }
-
-  /**
-   * Process an incoming request and route to different ports based on path
-   */
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-
-    try {
-      if (url.pathname.startsWith('/query')) {
-        // API server runs on port 3000
-        return await this.containerFetch(request, 3000);
-      } else {
-        return new Response('Not found', { status: 404 });
-      }
-    } catch (error) {
-      return new Response(`Error: ${error instanceof Error ? error.message : String(error)}`, {
-        status: 500
-      });
-    }
+    this.envVars = envConfig;
   }
 }
+
+export default {
+  async fetch(request: Request, env: any): Promise<Response> {
+    try {
+      return await env.CONTAINER.get(env.CONTAINER.idFromName('cloudflare-ducklake')).fetch(request);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error('Error fetch:', err.message);
+        return new Response(err.message, { status: 500 });
+      }
+      return new Response('Unknown error', { status: 500 });
+    }
+    // const url = new URL(request.url);
+
+    // try {
+    //   if (url.pathname.startsWith('/query')) {
+    //     // API server runs on port 3000
+    //     return await this.containerFetch(request, 3000);
+    //   } else {
+    //     return new Response('Not found', { status: 404 });
+    //   }
+    // } catch (error) {
+    //   return new Response(`Error: ${error instanceof Error ? error.message : String(error)}`, {
+    //     status: 500
+    //   });
+    // }
+  },
+};
+

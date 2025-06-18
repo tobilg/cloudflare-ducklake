@@ -80,20 +80,6 @@ export default {
       }
       return new Response('Unknown error', { status: 500 });
     }
-    // const url = new URL(request.url);
-
-    // try {
-    //   if (url.pathname.startsWith('/query')) {
-    //     // API server runs on port 3000
-    //     return await this.containerFetch(request, 3000);
-    //   } else {
-    //     return new Response('Not found', { status: 404 });
-    //   }
-    // } catch (error) {
-    //   return new Response(`Error: ${error instanceof Error ? error.message : String(error)}`, {
-    //     status: 500
-    //   });
-    // }
   },
 };
 

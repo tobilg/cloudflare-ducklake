@@ -5,7 +5,7 @@ import { bearerAuth } from 'hono/bearer-auth';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
-import { createConnection, initialize, query } from './lib/dbUtils';
+import { createConnection, generateTableSchema, generateTableSchemas, initialize, query } from './lib/dbUtils';
 
 // Setup bindings
 type Bindings = {
@@ -42,7 +42,28 @@ api.notFound((c) => c.json({ message: 'Not Found', ok: false }, 404));
 // // Enable basic auth if username & password are set
 if (API_TOKEN) {
   api.use('/query', bearerAuth({ token: API_TOKEN }));
+  api.use('/schema', bearerAuth({ token: API_TOKEN }));
 }
+
+// Get table schema
+api.get('/schema', async (c) => {
+  if (!connection) {
+    connection = await createConnection();
+  }
+
+  // Check if DuckDB has been initalized
+  if (!isInitialized) {
+    // Run initalization queries
+    await initialize(connection);
+
+    // Store initialization
+    isInitialized = true;
+  }
+
+  const tableSchema = await generateTableSchema(connection);
+
+  return c.text(tableSchema, 200);
+});
 
 // Setup query route
 api.post('/query', async (c) => {

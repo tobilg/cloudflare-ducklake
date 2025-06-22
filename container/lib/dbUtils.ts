@@ -1,6 +1,56 @@
 import DuckDB from 'duckdb';
 import { filterQuery } from './queryFilter';
 
+export interface Database {
+  name: string;
+  schemas?: Schema[];
+}
+
+export interface Schema {
+  name: string;
+  tables?: Table[];
+  views?: View[];
+}
+
+export interface View {
+  databaseName?: string;
+  schemaName?: string;
+  name: string;
+  sql?: string;
+  columns?: Column[];
+}
+
+export interface Table {
+  databaseName?: string;
+  schemaName?: string;
+  name: string;
+  hasPrimaryKey: boolean;
+  estimatedRowCount: number;
+  columnCount: number;
+  indexCount: number;
+  checkConstraintCount: number;
+  sql: string;
+  columns?: Column[];
+}
+
+export interface BasicTable {
+  databaseName: string;
+  schemaName: string;
+  name: string;
+  sql: string;
+}
+
+export interface Column {
+  databaseName?: string;
+  schemaName?: string;
+  tableName?: string;
+  name: string;
+  dataType: string;
+  precision: number;
+  scale: number;
+  isNullable: boolean;
+}
+
 // Instantiate DuckDB
 const duckDB = new DuckDB.Database(':memory:');
 
@@ -97,4 +147,172 @@ export const initialize = async () => {
   await query('SET lock_configuration=true;', false);
 
   console.log('Done initializing DuckDB');
+};
+
+const getTables = async (): Promise<BasicTable[]> => {
+  const tablesAndViewsQuery = `SELECT databaseName, schemaName, name, sql FROM (
+  SELECT database_name as databaseName, schema_name as schemaName, table_name as name, sql FROM duckdb_tables() WHERE database_name NOT IN ('system', 'temp', '__ducklake_metadata_ducklake') and schema_name NOT IN ('information_schema', 'pg_catalog') and internal = false
+  UNION ALL
+  SELECT database_name as databaseName, schema_name as schemaName, view_name as name, sql FROM duckdb_views() WHERE database_name NOT IN ('system', 'temp', '__ducklake_metadata_ducklake') and schema_name NOT IN ('information_schema', 'pg_catalog') and internal = false
+  ) ORDER BY databaseName, schemaName, name`;
+
+  const tablesAndViews = (await query(tablesAndViewsQuery, false)) as unknown as BasicTable[];
+
+  return tablesAndViews;
+}
+
+const getMetadata = async (): Promise<Database[]> => {
+  // Database metadata query
+  const databaseMetadataQuery = `SELECT database_name as databaseName FROM duckdb_databases() WHERE database_name NOT IN ('system', 'temp', '__ducklake_metadata_ducklake') ORDER BY database_name`;
+  // Schema metadata query
+  const schemaMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName FROM duckdb_schemas() WHERE database_name NOT IN ('system', 'temp', '__ducklake_metadata_ducklake') and schema_name NOT IN ('information_schema', 'pg_catalog') ORDER BY database_name, schema_name`;
+  // Table metadata query
+  const tablesMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, table_name as name, has_primary_key as hasPrimaryKey, estimated_size as estimatedRowCount, column_count as columnCount, index_count as indexCount, check_constraint_count as checkConstraintCount, sql FROM duckdb_tables() WHERE internal = false ORDER BY database_name, schema_name, table_name`;
+  // View metadata query
+  const viewsMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, view_name as name, sql FROM duckdb_views() WHERE internal = false`;
+  // Column metadata query
+  const columnsMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, table_name as tableName, column_name as name, data_type as dataType, numeric_precision as precision, numeric_scale as scale, is_nullable as isNullable FROM duckdb_columns() WHERE internal = false ORDER BY database_name, schema_name, table_name, column_index`;
+  
+  const databaseRaw = await query(databaseMetadataQuery, false)
+  const schemas = await query(schemaMetadataQuery, false)
+  const tables = await query(tablesMetadataQuery, false);
+  const views = await query(viewsMetadataQuery, false);
+  const columns = await query(columnsMetadataQuery, false);
+
+  const databases = databaseRaw.map((database) => ({
+    name: database.databaseName as string,
+    schemas: [
+      ...new Set(
+        schemas
+          .filter((schema) => database.databaseName === schema.databaseName)
+          .map(
+            (schema) =>
+              ({
+                name: schema.schemaName,
+                tables: [
+                  ...new Set(
+                    tables
+                      .filter(
+                        (table) =>
+                          schema.databaseName === table.databaseName && schema.schemaName === table.schemaName,
+                      )
+                      .map((table) => ({
+                        databaseName: database.databaseName,
+                        schemaName: schema.schemaName,
+                        name: table.name,
+                        hasPrimaryKey: table.hasPrimaryKey,
+                        estimatedRowCount: table.estimatedRowCount,
+                        columnCount: table.columnCount,
+                        indexCount: table.indexCount,
+                        checkConstraintCount: table.checkConstraintCount,
+                        sql: table.sql,
+                        columns: [
+                          ...new Set(
+                            columns
+                              .filter(
+                                (column) =>
+                                  column.databaseName === table.databaseName &&
+                                  column.schemaName === table.schemaName &&
+                                  column.tableName === table.name,
+                              )
+                              .map(
+                                (column) =>
+                                  ({
+                                    name: column.name,
+                                    dataType: column.dataType,
+                                    precision: column.precision,
+                                    scale: column.scale,
+                                    isNullable: column.isNullable,
+                                  }) as Column,
+                              ),
+                          ),
+                        ],
+                      } as Table
+                    )),
+                  ),
+                ],
+                views: [
+                  ...new Set(
+                    views
+                      .filter(
+                        (view) => view.databaseName === schema.databaseName && view.schemaName === schema.schemaName,
+                      )
+                      .map(
+                        (view) =>
+                          ({
+                            databaseName: database.databaseName,
+                            schemaName: schema.schemaName,
+                            name: view.name,
+                            sql: view.sql,
+                            columns: [
+                              ...new Set(
+                                columns
+                                  .filter(
+                                    (column) =>
+                                      column.databaseName === view.databaseName &&
+                                      column.schemaName === view.schemaName &&
+                                      column.tableName === view.name,
+                                  )
+                                  .map(
+                                    (column) =>
+                                      ({
+                                        name: column.name,
+                                        dataType: column.dataType,
+                                        precision: column.precision,
+                                        scale: column.scale,
+                                        isNullable: column.isNullable,
+                                      }) as Column,
+                                  ),
+                              ),
+                            ],
+                          }) as View,
+                      ),
+                  ),
+                ],
+              }
+            ) as Schema,
+          ),
+      ),
+    ],
+  }));
+
+  return databases;
+}
+
+export const generateTableSchemas = async (): Promise<string | undefined> => {
+  const databases = await getMetadata();
+
+  // Table schema placeholder
+  let tableSchemas: string | undefined;
+
+  if (databases && databases.length > 0) {
+    // Get tables
+    const tables = databases
+      .map((database) => database.schemas!.map((schema) => schema.tables!))
+      .flat()
+      .flat();
+
+    if (tables && tables.length > 0) {
+      tableSchemas = tables
+        .map((table) => table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`))
+        .join("\n\n");
+    }
+  }
+
+  return tableSchemas;
+};
+
+export const generateTableSchema = async (): Promise<string> => {
+  const tables = await getTables();
+
+  // Table schema placeholder
+  let tableSchemas: string = '';
+
+  if (tables && tables.length > 0) {
+    tableSchemas = tables
+      .map((table) => table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`))
+      .join("\n\n");
+  }
+
+  return tableSchemas;
 };

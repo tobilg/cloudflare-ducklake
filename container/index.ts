@@ -8,7 +8,7 @@ import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
 import Logger from './lib/logger';
-import { initialize, query, streamingQuery } from './lib/dbUtils';
+import { generateTableSchema, initialize, query, streamingQuery } from './lib/dbUtils';
 
 // Setup bindings
 type Bindings = {
@@ -70,7 +70,24 @@ if (USERNAME && PASSWORD) {
 // Enable bearer auth if API_TOKEN is set
 if (API_TOKEN) {
   api.use('/query', bearerAuth({ token: API_TOKEN }));
+  api.use('/schema', bearerAuth({ token: API_TOKEN }));
 }
+
+// Get table schema
+api.get('/schema', async (c) => {
+  // Check if DuckDB has been initalized
+  if (!isInitialized) {
+    // Run initalization queries
+    await initialize();
+
+    // Store initialization
+    isInitialized = true;
+  }
+
+  const tableSchema = await generateTableSchema();
+
+  return c.text(tableSchema, 200);
+});
 
 // Setup query route
 api.post('/query', async (c) => {

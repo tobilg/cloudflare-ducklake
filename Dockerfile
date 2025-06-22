@@ -1,5 +1,5 @@
 # See https://hono.dev/docs/getting-started/nodejs#dockerfile
-FROM node:20-bookworm-slim AS builder
+FROM node:23-bookworm-slim AS builder
 
 #USER node
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY container/ src/
 RUN npm run build && \
     npm prune --production
 
-FROM node:20-bookworm-slim
+FROM node:23-bookworm-slim
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 hono
 RUN apt-get update && apt-get install -y ca-certificates

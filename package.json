@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-ducklake",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "scripts": {
     "build": "rm -rf dist/ && tsc",
     "build:docker": "rm -rf extensions && scripts/download_extensions.sh && docker buildx build --platform linux/amd64 -t tobilg/cloudflare-ducklake .",

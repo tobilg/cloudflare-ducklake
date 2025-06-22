@@ -68,7 +68,7 @@ export const query = (query: string, filteringEnabled = true): Promise<DuckDB.Ta
 };
 
 export const streamingQuery = (query: string, filteringEnabled = true): Promise<DuckDB.IpcResultStreamIterator> => {
-  return connection.arrowIPCStream(filterQuery(query, filteringEnabled));
+  return connection.arrowIPCStream(filterQuery(query.replace(';', ''), filteringEnabled));
 };
 
 export const initialize = async () => {

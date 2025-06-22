@@ -15,6 +15,7 @@ type Bindings = {
   USERNAME: string;
   PASSWORD: string;
   API_TOKEN: string;
+  PORT: string; 
 };
 
 // Patch BigInt
@@ -35,17 +36,6 @@ const port = PORT ? parseInt(PORT) : 3000;
 
 // Store initialization
 let isInitialized = false;
-
-// Instantiate Hono
-const app = new Hono();
-
-// Setup routes & middleware
-app.get('/', (c) => c.json({ message: 'Welcome to DuckDB API' }));
-app.get('/_health', (c) => c.text('OK'));
-app.use(prettyJSON());
-app.use(logger());
-app.use('*', requestId());
-app.notFound((c) => c.json({ message: 'Not Found', ok: false }, 404));
 
 // Setup API
 const api = new Hono<{ Bindings: Bindings }>();

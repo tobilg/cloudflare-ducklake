@@ -60,7 +60,6 @@ const connection = duckDB.connect();
 // Promisify query method
 export const query = (query: string, filteringEnabled = true): Promise<DuckDB.TableData> => {
   return new Promise((resolve, reject) => {
-    console.log(filterQuery(query, filteringEnabled));
     connection.all(filterQuery(query, filteringEnabled), (err, res) => {
       if (err) reject(err);
       resolve(res);

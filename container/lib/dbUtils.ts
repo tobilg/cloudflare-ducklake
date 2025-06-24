@@ -60,6 +60,7 @@ const connection = duckDB.connect();
 // Promisify query method
 export const query = (query: string, filteringEnabled = true): Promise<DuckDB.TableData> => {
   return new Promise((resolve, reject) => {
+    console.log(filterQuery(query, filteringEnabled));
     connection.all(filterQuery(query, filteringEnabled), (err, res) => {
       if (err) reject(err);
       resolve(res);
@@ -141,7 +142,7 @@ export const initialize = async () => {
   await query('SET unsafe_enable_version_guessing=true;', false);
 
   // Lock the local file system, because using R2 for storage
-  await query("SET disabled_filesystems = 'LocalFileSystem';", false);
+  //await query("SET disabled_filesystems = 'LocalFileSystem';", false);
 
   // Lock the configuration
   await query('SET lock_configuration=true;', false);

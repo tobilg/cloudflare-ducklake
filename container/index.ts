@@ -118,6 +118,7 @@ api.post('/query', async (c) => {
 
     return c.json(queryResult, 200);
   } catch (error) {
+    requestLogger.error({ error: error });
     return c.json({ error: error }, 500);
   }
 });
@@ -167,6 +168,7 @@ api.post('/streaming-query', async (c) => {
       }
     });
   } catch (error) {
+    requestLogger.error({ error: error });
     return c.json({ error: error }, 500);
   }
 });

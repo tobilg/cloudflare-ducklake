@@ -12,7 +12,7 @@ export default class Logger {
 
   // See https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/bunyan/index.d.ts#L196
   constructor(options: LoggerOptions | undefined) {
-    this.level = options?.level || (process.env.LOG_LEVEL as LogLevelString) || ('info' as LogLevelString);
+    this.level = options?.level || (process.env.LOG_LEVEL as LogLevelString) || ('debug' as LogLevelString);
     this.name = options?.name || 'duckdb-api-logger';
   }
 

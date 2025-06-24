@@ -17,11 +17,8 @@
       "name": "cloudflare-ducklake",
       "image": "./Dockerfile",
       "class_name": "Container",
-      "max_instances": 2,
-      "configuration": {
-        "memory": "4GB",
-        "vcpu": 2
-      }
+      "max_instances": 1,
+      "instance_type": "large"
     }
   ],
   "durable_objects": {

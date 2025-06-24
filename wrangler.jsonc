@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-ducklake",
-  "compatibility_date": "2025-06-18",
+  "compatibility_date": "2025-06-20",
   "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -17,11 +17,8 @@
       "name": "cloudflare-ducklake",
       "image": "./Dockerfile",
       "class_name": "Container",
-      "max_instances": 2,
-      "configuration": {
-        "memory": "4GB",
-        "vcpu": 2
-      }
+      "max_instances": 1,
+      "instance_type": "standard"
     }
   ],
   "durable_objects": {

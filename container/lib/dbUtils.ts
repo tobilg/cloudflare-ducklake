@@ -77,6 +77,9 @@ export const initialize = async () => {
   // Load httpfs
   await query("INSTALL '/app/extensions/httpfs.duckdb_extension';", false);
   await query("LOAD '/app/extensions/httpfs.duckdb_extension';", false);
+  // Load spatial
+  await query("INSTALL '/app/extensions/spatial.duckdb_extension';", false);
+  await query("LOAD '/app/extensions/spatial.duckdb_extension';", false);
   // Load iceberg
   await query("INSTALL '/app/extensions/iceberg.duckdb_extension';", false);
   await query("LOAD '/app/extensions/iceberg.duckdb_extension';", false);

@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-ducklake",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "scripts": {
     "build": "rm -rf dist/ && tsc",
     "build:docker": "rm -rf extensions && scripts/download_extensions.sh && docker buildx build --platform linux/amd64 -t tobilg/cloudflare-ducklake .",
@@ -20,10 +20,10 @@
   },
   "dependencies": {
     "bunyan": "^1.8.15",
-    "duckdb": "^1.3.1",
-    "@cloudflare/containers": "^0.0.13",
-    "@cloudflare/workers-types": "^4.20250620.0",
-    "@hono/node-server": "^1.14.4",
-    "hono": "^4.8.2"
+    "duckdb": "^1.3.2",
+    "@cloudflare/containers": "^0.0.20",
+    "@cloudflare/workers-types": "^4.20250711.0",
+    "@hono/node-server": "^1.15.0",
+    "hono": "^4.8.4"
   }
 }

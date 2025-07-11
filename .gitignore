@@ -139,3 +139,4 @@ backups/
 .wrangler
 .dev.vars
 extensions/
+scripts/example-queries.sh

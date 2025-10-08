@@ -63,7 +63,7 @@ export class Container extends PkgContainer<EnvWithCustomVariables> {
     }
 
     this.defaultPort = 3000;
-    this.sleepAfter = "1m";
+    this.sleepAfter = '1m';
     this.enableInternet = true;
     this.envVars = envConfig;
   }
@@ -82,4 +82,3 @@ export default {
     }
   },
 };
-

@@ -1,21 +1,21 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { stream } from 'hono/streaming';
 import { basicAuth } from 'hono/basic-auth';
 import { bearerAuth } from 'hono/bearer-auth';
+import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
-import Logger from './lib/logger';
+import { stream } from 'hono/streaming';
 import { generateTableSchema, initialize, query, streamingQuery } from './lib/dbUtils';
+import Logger from './lib/logger';
 
 // Setup bindings
 type Bindings = {
   USERNAME: string;
   PASSWORD: string;
   API_TOKEN: string;
-  PORT: string; 
+  PORT: string;
 };
 
 // Patch BigInt

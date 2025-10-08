@@ -159,7 +159,7 @@ const getTables = async (): Promise<BasicTable[]> => {
   const tablesAndViews = (await query(tablesAndViewsQuery, false)) as unknown as BasicTable[];
 
   return tablesAndViews;
-}
+};
 
 const getMetadata = async (): Promise<Database[]> => {
   // Database metadata query
@@ -172,9 +172,9 @@ const getMetadata = async (): Promise<Database[]> => {
   const viewsMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, view_name as name, sql FROM duckdb_views() WHERE internal = false`;
   // Column metadata query
   const columnsMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, table_name as tableName, column_name as name, data_type as dataType, numeric_precision as precision, numeric_scale as scale, is_nullable as isNullable FROM duckdb_columns() WHERE internal = false ORDER BY database_name, schema_name, table_name, column_index`;
-  
-  const databaseRaw = await query(databaseMetadataQuery, false)
-  const schemas = await query(schemaMetadataQuery, false)
+
+  const databaseRaw = await query(databaseMetadataQuery, false);
+  const schemas = await query(schemaMetadataQuery, false);
   const tables = await query(tablesMetadataQuery, false);
   const views = await query(viewsMetadataQuery, false);
   const columns = await query(columnsMetadataQuery, false);
@@ -193,42 +193,43 @@ const getMetadata = async (): Promise<Database[]> => {
                   ...new Set(
                     tables
                       .filter(
-                        (table) =>
-                          schema.databaseName === table.databaseName && schema.schemaName === table.schemaName,
+                        (table) => schema.databaseName === table.databaseName && schema.schemaName === table.schemaName,
                       )
-                      .map((table) => ({
-                        databaseName: database.databaseName,
-                        schemaName: schema.schemaName,
-                        name: table.name,
-                        hasPrimaryKey: table.hasPrimaryKey,
-                        estimatedRowCount: table.estimatedRowCount,
-                        columnCount: table.columnCount,
-                        indexCount: table.indexCount,
-                        checkConstraintCount: table.checkConstraintCount,
-                        sql: table.sql,
-                        columns: [
-                          ...new Set(
-                            columns
-                              .filter(
-                                (column) =>
-                                  column.databaseName === table.databaseName &&
-                                  column.schemaName === table.schemaName &&
-                                  column.tableName === table.name,
-                              )
-                              .map(
-                                (column) =>
-                                  ({
-                                    name: column.name,
-                                    dataType: column.dataType,
-                                    precision: column.precision,
-                                    scale: column.scale,
-                                    isNullable: column.isNullable,
-                                  }) as Column,
+                      .map(
+                        (table) =>
+                          ({
+                            databaseName: database.databaseName,
+                            schemaName: schema.schemaName,
+                            name: table.name,
+                            hasPrimaryKey: table.hasPrimaryKey,
+                            estimatedRowCount: table.estimatedRowCount,
+                            columnCount: table.columnCount,
+                            indexCount: table.indexCount,
+                            checkConstraintCount: table.checkConstraintCount,
+                            sql: table.sql,
+                            columns: [
+                              ...new Set(
+                                columns
+                                  .filter(
+                                    (column) =>
+                                      column.databaseName === table.databaseName &&
+                                      column.schemaName === table.schemaName &&
+                                      column.tableName === table.name,
+                                  )
+                                  .map(
+                                    (column) =>
+                                      ({
+                                        name: column.name,
+                                        dataType: column.dataType,
+                                        precision: column.precision,
+                                        scale: column.scale,
+                                        isNullable: column.isNullable,
+                                      }) as Column,
+                                  ),
                               ),
-                          ),
-                        ],
-                      } as Table
-                    )),
+                            ],
+                          }) as Table,
+                      ),
                   ),
                 ],
                 views: [
@@ -269,15 +270,14 @@ const getMetadata = async (): Promise<Database[]> => {
                       ),
                   ),
                 ],
-              }
-            ) as Schema,
+              }) as Schema,
           ),
       ),
     ],
   }));
 
   return databases;
-}
+};
 
 export const generateTableSchemas = async (): Promise<string | undefined> => {
   const databases = await getMetadata();
@@ -287,15 +287,14 @@ export const generateTableSchemas = async (): Promise<string | undefined> => {
 
   if (databases && databases.length > 0) {
     // Get tables
-    const tables = databases
-      .map((database) => database.schemas!.map((schema) => schema.tables!))
-      .flat()
-      .flat();
+    const tables = databases.flatMap((database) => database.schemas!.map((schema) => schema.tables!)).flat();
 
     if (tables && tables.length > 0) {
       tableSchemas = tables
-        .map((table) => table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`))
-        .join("\n\n");
+        .map((table) =>
+          table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`),
+        )
+        .join('\n\n');
     }
   }
 
@@ -310,8 +309,10 @@ export const generateTableSchema = async (): Promise<string> => {
 
   if (tables && tables.length > 0) {
     tableSchemas = tables
-      .map((table) => table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`))
-      .join("\n\n");
+      .map((table) =>
+        table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`),
+      )
+      .join('\n\n');
   }
 
   return tableSchemas;

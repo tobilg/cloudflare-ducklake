@@ -10,7 +10,7 @@
     "start": "npx wrangler dev",
     "cf-typegen": "npx wrangler types",
     "lint": "biome check src/ container/",
-    "lint:fix": "biome check . --write"
+    "lint:fix": "biome check src/ container/ --write"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.5",

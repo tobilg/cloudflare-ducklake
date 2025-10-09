@@ -125,8 +125,8 @@ api.post('/query', async (c) => {
 // Setup query route
 api.post('/streaming-query', async (c) => {
   // Setup logger
-  const requestLogger = apiLogger.child({ requestId: c.get('requestId')});
-  
+  const requestLogger = apiLogger.child({ requestId: c.get('requestId') });
+
   // Parse body with query
   const body = await c.req.json();
 
@@ -151,37 +151,40 @@ api.post('/streaming-query', async (c) => {
     c.status(200);
 
     // Stream response
-    return stream(c, async (stream) => {
-      // Write a process to be executed when aborted.
-      stream.onAbort(() => {
-        requestLogger.error('Aborted stream!');
-      });
+    return stream(
+      c,
+      async (stream) => {
+        // Write a process to be executed when aborted.
+        stream.onAbort(() => {
+          requestLogger.error('Aborted stream!');
+        });
 
-      // Track query start timestamp
-      const queryStartTimestamp = new Date().getTime();
+        // Track query start timestamp
+        const queryStartTimestamp = new Date().getTime();
 
-      // Get Arrow IPC stream
-      const arrowStream = await streamingQuery(body.query, true);
+        // Get Arrow IPC stream
+        const arrowStream = await streamingQuery(body.query, true);
 
-      // Stream Arrow IPC stream to response
-      for await (const chunk of arrowStream) {
-        // Write chunk
-        await stream.write(chunk);
-      }
+        // Stream Arrow IPC stream to response
+        for await (const chunk of arrowStream) {
+          // Write chunk
+          await stream.write(chunk);
+        }
 
-      // Track query end timestamp
-      const queryEndTimestamp = new Date().getTime();
+        // Track query end timestamp
+        const queryEndTimestamp = new Date().getTime();
 
-      requestLogger.debug({
-        query: body.query,
-        path: c.req.path,
-        queryStartTimestamp,
-        queryEndTimestamp,
-      });
-    },
-    async (err, _stream) => {
-      requestLogger.error({ error: err });
-    });
+        requestLogger.debug({
+          query: body.query,
+          path: c.req.path,
+          queryStartTimestamp,
+          queryEndTimestamp,
+        });
+      },
+      async (err, _stream) => {
+        requestLogger.error({ error: err });
+      },
+    );
   } catch (error) {
     requestLogger.error({ error: error });
     return c.json({ error: error }, 500);

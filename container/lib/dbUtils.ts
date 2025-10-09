@@ -1,6 +1,6 @@
 import DuckDB from 'duckdb';
-import { filterQuery } from './queryFilter';
 import Logger from './logger';
+import { filterQuery } from './queryFilter';
 
 // Instantiate logger
 const apiLogger = new Logger({

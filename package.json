@@ -6,7 +6,7 @@
     "build:docker": "rm -rf extensions && scripts/download_extensions.sh && docker buildx build --platform linux/amd64 -t tobilg/cloudflare-ducklake .",
     "deploy": "rm -rf extensions && scripts/download_extensions.sh && npx wrangler deploy",
     "dev": "npx wrangler dev",
-    "dev:docker": "docker run --rm -it --env-file ./.dev.vars -p 8080:3000 tobilg/cloudflare-ducklake",
+    "dev:docker": "docker run --platform linux/amd64 --rm -it --env-file ./.dev.vars -p 3000:3000 tobilg/cloudflare-ducklake",
     "start": "npx wrangler dev",
     "cf-typegen": "npx wrangler types",
     "lint": "biome check src/ container/",
@@ -20,11 +20,11 @@
     "wrangler": "^4.42.1"
   },
   "dependencies": {
-    "bunyan": "^1.8.15",
-    "duckdb": "^1.4.1",
     "@cloudflare/containers": "^0.0.28",
     "@cloudflare/workers-types": "^4.20251008.0",
     "@hono/node-server": "^1.19.5",
+    "bunyan": "^1.8.15",
+    "duckdb": "^1.4.1",
     "hono": "^4.9.10"
   }
 }

@@ -20,7 +20,8 @@ export default class Logger {
     if (!this.loggerInstance) {
       this.loggerInstance = bunyan.createLogger({
         name: this.name,
-        level: this.level,
+        level: this.level || 'debug',
+        stream: process.stdout,
       });
     }
     return this.loggerInstance;

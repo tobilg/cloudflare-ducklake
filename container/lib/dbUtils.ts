@@ -1,5 +1,11 @@
 import DuckDB from 'duckdb';
 import { filterQuery } from './queryFilter';
+import Logger from './logger';
+
+// Instantiate logger
+const apiLogger = new Logger({
+  name: 'duckdb-api-logger',
+}).getInstance();
 
 export interface Database {
   name: string;
@@ -73,21 +79,23 @@ export const streamingQuery = (query: string, filteringEnabled = true): Promise<
 
 export const initialize = async () => {
   // Load home directory
-  await query("SET home_directory='/tmp';", false);
+  await query("SET temp_directory='/app/tmp';", false);
+
+  // Disable auto install & auto load of known extensions
+  await query(`SET autoinstall_known_extensions = false;`, false);
+  await query(`SET autoload_known_extensions = false;`, false);
+
   // Load httpfs
-  await query("INSTALL '/app/extensions/httpfs.duckdb_extension';", false);
   await query("LOAD '/app/extensions/httpfs.duckdb_extension';", false);
+  // Load avro
+  await query("LOAD '/app/extensions/avro.duckdb_extension';", false);
   // Load iceberg
-  await query("INSTALL '/app/extensions/iceberg.duckdb_extension';", false);
   await query("LOAD '/app/extensions/iceberg.duckdb_extension';", false);
   // Load ducklake
-  await query("INSTALL '/app/extensions/ducklake.duckdb_extension';", false);
   await query("LOAD '/app/extensions/ducklake.duckdb_extension';", false);
   // Load nanoarrow
-  await query("INSTALL '/app/extensions/nanoarrow.duckdb_extension';", false);
   await query("LOAD '/app/extensions/nanoarrow.duckdb_extension';", false);
   // Load postgres
-  await query("INSTALL '/app/extensions/postgres_scanner.duckdb_extension';", false);
   await query("LOAD '/app/extensions/postgres_scanner.duckdb_extension';", false);
 
   // Create R2 Data Catalog secret if env vars are set, and attach catalog
@@ -103,7 +111,7 @@ export const initialize = async () => {
       false,
     );
 
-    console.log('Done initializing Iceberg');
+    apiLogger.debug('Done initializing Iceberg');
   }
 
   // Create R2 secret & attach DuckLake if env vars are set
@@ -124,11 +132,11 @@ export const initialize = async () => {
     );
     // Attach remote Postgres
     await query(
-      `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://${process.env.R2_BUCKET}/data');`,
+      `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://${process.env.R2_BUCKET}/data', OVERRIDE_DATA_PATH true);`,
       false,
     );
 
-    console.log('Done initializing DuckLake');
+    apiLogger.debug('Done initializing DuckLake');
   }
 
   // Whether or not the global http metadata is used to cache HTTP metadata, see https://github.com/duckdb/duckdb/pull/5405
@@ -137,16 +145,16 @@ export const initialize = async () => {
   // Whether or not object cache is used to cache e.g. Parquet metadata
   await query('SET enable_object_cache=true;', false);
 
-  // Whether or not version guessing is enabled
+  // Whether or not version guessing is enabled (Iceberg only!!)
   await query('SET unsafe_enable_version_guessing=true;', false);
 
   // Lock the local file system, because using R2 for storage
-  //await query("SET disabled_filesystems = 'LocalFileSystem';", false);
+  await query("SET disabled_filesystems = 'LocalFileSystem';", false);
 
   // Lock the configuration
   await query('SET lock_configuration=true;', false);
 
-  console.log('Done initializing DuckDB');
+  apiLogger.debug('Done initializing DuckDB');
 };
 
 const getTables = async (): Promise<BasicTable[]> => {

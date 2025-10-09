@@ -3,7 +3,6 @@ import { Hono } from 'hono';
 import { basicAuth } from 'hono/basic-auth';
 import { bearerAuth } from 'hono/bearer-auth';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
 import { stream } from 'hono/streaming';
@@ -43,7 +42,6 @@ const api = new Hono<{ Bindings: Bindings }>();
 // Setup routes & middleware
 api.get('/', (c) => c.json({ message: 'Welcome to DuckDB API' }));
 api.use(prettyJSON());
-api.use(logger());
 api.use('*', requestId());
 api.notFound((c) => c.json({ message: 'Not Found', ok: false }, 404));
 
@@ -112,13 +110,14 @@ api.post('/query', async (c) => {
 
     requestLogger.debug({
       query: body.query,
+      path: c.req.path,
       queryStartTimestamp,
       queryEndTimestamp,
     });
 
     return c.json(queryResult, 200);
   } catch (error) {
-    requestLogger.error({ error: error });
+    //requestLogger.error({ error: error });
     return c.json({ error: error }, 500);
   }
 });
@@ -126,8 +125,8 @@ api.post('/query', async (c) => {
 // Setup query route
 api.post('/streaming-query', async (c) => {
   // Setup logger
-  const requestLogger = apiLogger.child({ requestId: c.get('requestId') });
-
+  const requestLogger = apiLogger.child({ requestId: c.get('requestId')});
+  
   // Parse body with query
   const body = await c.req.json();
 
@@ -155,8 +154,11 @@ api.post('/streaming-query', async (c) => {
     return stream(c, async (stream) => {
       // Write a process to be executed when aborted.
       stream.onAbort(() => {
-        requestLogger.error('Aborted!');
+        requestLogger.error('Aborted stream!');
       });
+
+      // Track query start timestamp
+      const queryStartTimestamp = new Date().getTime();
 
       // Get Arrow IPC stream
       const arrowStream = await streamingQuery(body.query, true);
@@ -166,6 +168,19 @@ api.post('/streaming-query', async (c) => {
         // Write chunk
         await stream.write(chunk);
       }
+
+      // Track query end timestamp
+      const queryEndTimestamp = new Date().getTime();
+
+      requestLogger.debug({
+        query: body.query,
+        path: c.req.path,
+        queryStartTimestamp,
+        queryEndTimestamp,
+      });
+    },
+    async (err, _stream) => {
+      requestLogger.error({ error: err });
     });
   } catch (error) {
     requestLogger.error({ error: error });
@@ -180,20 +195,21 @@ const server = serve(
     port,
   },
   (info) => {
-    console.log(`Listening on http://localhost:${info.port}`);
+    apiLogger.info(`Listening on http://localhost:${info.port}`);
   },
 );
 
-// graceful shutdown
+// Graceful shutdown for SIGINT
 process.on('SIGINT', () => {
   server.close();
   process.exit(0);
 });
 
+// Graceful shutdown for SIGTERM
 process.on('SIGTERM', () => {
   server.close((err) => {
     if (err) {
-      console.error(err);
+      apiLogger.error(err);
       process.exit(1);
     }
     process.exit(0);

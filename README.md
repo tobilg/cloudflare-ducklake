@@ -44,7 +44,9 @@ DuckDB is exposed as a Hono.js-based API, that offers a few endpoints:
 * `POST /streaming-query`: Takes a `application/json` object body with a `query` property that contains the (encoded) SQL query. Returns the query result in `application/vnd.apache.arrow.stream` (Arrow data stream)
 
 ### Securing the API
-You can generate a unique API Token, e.g. with a tool like [Strong Password Generator](https://1password.com/password-generator), and deploy a Workers secret named `API_TOKEN` that will automatically be used to secure the `/query` endpoint once it's present with the below script:
+You can generate a unique API Token, e.g. with a tool like [Strong Password Generator](https://1password.com/password-generator) NOTE: it needs to satisfy the requirements in [Hono's Bearer Auth Middleware](https://hono.dev/docs/middleware/builtin/bearer-auth) - namely satisfying this regex: `/[A-Za-z0-9._~+/-]+=*/`. 
+
+Then deploy a Workers secret named `API_TOKEN` that will automatically be used to secure the `/query` endpoint once it's present, with the below script:
 
 ```bash
 scripts/setup_api_secrets.sh

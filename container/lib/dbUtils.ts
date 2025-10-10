@@ -95,6 +95,8 @@ export const initialize = async () => {
   await query("LOAD '/app/extensions/ducklake.duckdb_extension';", false);
   // Load nanoarrow
   await query("LOAD '/app/extensions/nanoarrow.duckdb_extension';", false);
+  // Load spatial
+  await query("LOAD '/app/extensions/spatial.duckdb_extension';", false);
   // Load postgres
   await query("LOAD '/app/extensions/postgres_scanner.duckdb_extension';", false);
 

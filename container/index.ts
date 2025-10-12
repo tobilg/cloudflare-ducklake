@@ -6,8 +6,9 @@ import { cors } from 'hono/cors';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
 import { stream } from 'hono/streaming';
-import { generateTableSchema, initialize, query, streamingQuery } from './lib/dbUtils';
+import { generateTableSchemas, initialize, query, streamingQuery } from './lib/dbUtils';
 import Logger from './lib/logger';
+import { parseDuckDBError } from './lib/helpers';
 
 // Setup bindings
 type Bindings = {
@@ -63,6 +64,9 @@ if (API_TOKEN) {
 
 // Get table schema
 api.get('/schema', async (c) => {
+  // Setup logger
+  const requestLogger = apiLogger.child({ requestId: c.get('requestId') });
+
   // Check if DuckDB has been initalized
   if (!isInitialized) {
     // Run initalization queries
@@ -72,9 +76,20 @@ api.get('/schema', async (c) => {
     isInitialized = true;
   }
 
-  const tableSchema = await generateTableSchema();
+  try {
+    const schema = await generateTableSchemas();
 
-  return c.text(tableSchema, 200);
+    requestLogger.debug({
+      path: c.req.path,
+    });
+
+    return c.json({ schema }, 200);
+  } catch (error: unknown) {
+    const parsedDuckDBError = parseDuckDBError(error);
+    
+    requestLogger.error(parsedDuckDBError);
+    return c.json({ error: parsedDuckDBError }, 500);
+  }
 });
 
 // Setup query route
@@ -116,9 +131,11 @@ api.post('/query', async (c) => {
     });
 
     return c.json(queryResult, 200);
-  } catch (error) {
-    //requestLogger.error({ error: error });
-    return c.json({ error: error }, 500);
+  } catch (error: unknown) {
+    const parsedDuckDBError = parseDuckDBError(error);
+    
+    requestLogger.error(parsedDuckDBError);
+    return c.json({ error: parsedDuckDBError }, 500);
   }
 });
 
@@ -185,9 +202,11 @@ api.post('/streaming-query', async (c) => {
         requestLogger.error({ error: err });
       },
     );
-  } catch (error) {
-    requestLogger.error({ error: error });
-    return c.json({ error: error }, 500);
+  } catch (error: unknown) {
+    const parsedDuckDBError = parseDuckDBError(error);
+    
+    requestLogger.error(parsedDuckDBError);
+    return c.json({ error: parsedDuckDBError }, 500);
   }
 });
 

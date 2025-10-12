@@ -148,10 +148,10 @@ export const initialize = async () => {
   await query('SET enable_object_cache=true;', false);
 
   // Whether or not version guessing is enabled (Iceberg only!!)
-  await query('SET unsafe_enable_version_guessing=true;', false);
+  //await query('SET unsafe_enable_version_guessing=true;', false);
 
   // Lock the local file system, because using R2 for storage
-  await query("SET disabled_filesystems = 'LocalFileSystem';", false);
+  //await query("SET disabled_filesystems = 'LocalFileSystem';", false);
 
   // Lock the configuration
   await query('SET lock_configuration=true;', false);
@@ -289,26 +289,10 @@ const getMetadata = async (): Promise<Database[]> => {
   return databases;
 };
 
-export const generateTableSchemas = async (): Promise<string | undefined> => {
+export const generateTableSchemas = async (): Promise<Database[]> => {
   const databases = await getMetadata();
 
-  // Table schema placeholder
-  let tableSchemas: string | undefined;
-
-  if (databases && databases.length > 0) {
-    // Get tables
-    const tables = databases.flatMap((database) => database.schemas!.map((schema) => schema.tables!)).flat();
-
-    if (tables && tables.length > 0) {
-      tableSchemas = tables
-        .map((table) =>
-          table.sql.replace(`${table.name}`, `"${table.databaseName}"."${table.schemaName}"."${table.name}"`),
-        )
-        .join('\n\n');
-    }
-  }
-
-  return tableSchemas;
+  return databases;
 };
 
 export const generateTableSchema = async (): Promise<string> => {

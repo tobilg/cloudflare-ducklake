@@ -91,8 +91,6 @@ export const initialize = async () => {
   await query("LOAD '/app/extensions/iceberg.duckdb_extension';", false);
   // Load ducklake
   await query("LOAD '/app/extensions/ducklake.duckdb_extension';", false);
-  // Load nanoarrow
-  await query("LOAD '/app/extensions/nanoarrow.duckdb_extension';", false);
   // Load spatial
   await query("LOAD '/app/extensions/spatial.duckdb_extension';", false);
   // Load postgres
@@ -132,7 +130,7 @@ export const initialize = async () => {
     );
     // Attach remote Postgres
     await query(
-      `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://${process.env.R2_BUCKET}/data', OVERRIDE_DATA_PATH true);`,
+      `ATTACH 'ducklake:postgres:dbname=${process.env.POSTGRES_DB} host=${process.env.POSTGRES_HOST} user=${process.env.POSTGRES_USER} password=${process.env.POSTGRES_PASSWORD} sslmode=require' AS ducklake (DATA_PATH 'r2://${process.env.R2_BUCKET}/data', OVERRIDE_DATA_PATH true, AUTOMATIC_MIGRATION true);`,
       false,
     );
 
@@ -152,7 +150,7 @@ export const initialize = async () => {
   //await query("SET disabled_filesystems = 'LocalFileSystem';", false);
 
   // Lock the configuration
-  //await query('SET lock_configuration=true;', false);
+  await query('SET lock_configuration=true;', false);
 
   apiLogger.debug('Done initializing DuckDB');
 };

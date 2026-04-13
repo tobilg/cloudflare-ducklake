@@ -193,31 +193,6 @@ scripts/create_r2_data_catalog_secrets.sh
 ```
 and copy & paste the respective values you noted in the last two steps.
 
-### Writing Iceberg example data
-As we need some example data if we want to test the new Iceberg capabilities, we need to create this data manually with a [Python script](scripts/python/create-iceberg-data.py).
-
-For convenience, we'll use [Marimo](https://marimo.io) for this. It requires a working Python installation on your machine.
-
-#### Setup Marimo
-To setup Marimo, run the following npm task:
-
-```bash
-npm run iceberg:setup
-```
-
-This will create a new directory and install Marimo and some dependencies in a virtual environment.
-
-#### Create the Iceberg example data
-To create the Iceberg example data, run the following npm task:
-
-```bash
-npm run iceberg:create
-```
-
-This will start Marimo, and load the respective Python script. You'll need to edit the variables for `WAREHOUSE`, `CATALOG_URI` and `TOKEN` with the values gathered in the last steps. This is also described in the [R2 Data Catalog docs](https://developers.cloudflare.com/r2/data-catalog/get-started/#6-create-a-python-notebook-to-interact-with-the-data-warehouse).
-
-After you did that, you can run the Python cells in the Marimo notebook, and should end up with some data created in the R2 Bucket. You can check in the Cloudflare Dashboard, or via `wrangler`.
-
 ### Running DuckDB with Iceberg support
 Once you created the secrets as outlined above (all of them!), the application will automatically create a DuckDB secret for accessing the R2 Data Catalog, and attach the catalog as well under the name of `r2lake` when it starts. The example table created in the last step is called `people` and was created in the `default` schema.
 

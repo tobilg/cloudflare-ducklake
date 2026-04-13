@@ -16,7 +16,7 @@
       "image": "./Dockerfile",
       "class_name": "Container",
       "max_instances": 1,
-      "instance_type": "standard-3"
+      "instance_type": "standard-1"
     }
   ],
   "durable_objects": {

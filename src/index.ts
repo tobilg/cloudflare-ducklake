@@ -72,7 +72,7 @@ export class Container extends PkgContainer<EnvWithCustomVariables> {
 export default {
   async fetch(request: Request, env: any): Promise<Response> {
     try {
-      return await env.CONTAINER.get(env.CONTAINER.idFromName('cloudflare-ducklake')).fetch(request);
+      return await env.CONTAINER.getByName('cloudflare-ducklake').fetch(request);
     } catch (err: unknown) {
       if (err instanceof Error) {
         console.error('Error fetch:', err.message);

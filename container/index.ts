@@ -5,10 +5,9 @@ import { bearerAuth } from 'hono/bearer-auth';
 import { cors } from 'hono/cors';
 import { prettyJSON } from 'hono/pretty-json';
 import { requestId } from 'hono/request-id';
-import { stream } from 'hono/streaming';
-import { generateTableSchemas, initialize, query, streamingQuery } from './lib/dbUtils';
-import Logger from './lib/logger';
+import { generateTableSchemas, initialize, query } from './lib/dbUtils';
 import { parseDuckDBError } from './lib/helpers';
+import Logger from './lib/logger';
 
 // Setup bindings
 type Bindings = {
@@ -16,11 +15,6 @@ type Bindings = {
   PASSWORD: string;
   API_TOKEN: string;
   PORT: string;
-};
-
-// Patch BigInt
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
 };
 
 // Instantiate logger
@@ -48,12 +42,10 @@ api.notFound((c) => c.json({ message: 'Not Found', ok: false }, 404));
 
 // Enable CORS
 api.use('/query', cors());
-api.use('/streaming-query', cors());
 
 // Enable basic auth if username & password are set
 if (USERNAME && PASSWORD) {
   api.use('/query', basicAuth({ username: USERNAME, password: PASSWORD }));
-  api.use('/streaming-query', basicAuth({ username: USERNAME, password: PASSWORD }));
 }
 
 // Enable bearer auth if API_TOKEN is set
@@ -86,7 +78,7 @@ api.get('/schema', async (c) => {
     return c.json({ schema }, 200);
   } catch (error: unknown) {
     const parsedDuckDBError = parseDuckDBError(error);
-    
+
     requestLogger.error(parsedDuckDBError);
     return c.json({ error: parsedDuckDBError }, 500);
   }
@@ -133,78 +125,7 @@ api.post('/query', async (c) => {
     return c.json(queryResult, 200);
   } catch (error: unknown) {
     const parsedDuckDBError = parseDuckDBError(error);
-    
-    requestLogger.error(parsedDuckDBError);
-    return c.json({ error: parsedDuckDBError }, 500);
-  }
-});
 
-// Setup query route
-api.post('/streaming-query', async (c) => {
-  // Setup logger
-  const requestLogger = apiLogger.child({ requestId: c.get('requestId') });
-
-  // Parse body with query
-  const body = await c.req.json();
-
-  if (!body.hasOwnProperty('query')) {
-    return c.json({ error: 'Missing query property in request body!' }, 400);
-  }
-
-  // Check if DuckDB has been initalized
-  if (!isInitialized) {
-    // Run initalization queries
-    await initialize();
-
-    // Store initialization
-    isInitialized = true;
-  }
-
-  try {
-    // Set content type to Arrow IPC stream
-    c.header('Content-Type', 'application/vnd.apache.arrow.stream');
-
-    // Set HTTP status code
-    c.status(200);
-
-    // Stream response
-    return stream(
-      c,
-      async (stream) => {
-        // Write a process to be executed when aborted.
-        stream.onAbort(() => {
-          requestLogger.error('Aborted stream!');
-        });
-
-        // Track query start timestamp
-        const queryStartTimestamp = new Date().getTime();
-
-        // Get Arrow IPC stream
-        const arrowStream = await streamingQuery(body.query, true);
-
-        // Stream Arrow IPC stream to response
-        for await (const chunk of arrowStream) {
-          // Write chunk
-          await stream.write(chunk);
-        }
-
-        // Track query end timestamp
-        const queryEndTimestamp = new Date().getTime();
-
-        requestLogger.debug({
-          query: body.query,
-          path: c.req.path,
-          queryStartTimestamp,
-          queryEndTimestamp,
-        });
-      },
-      async (err, _stream) => {
-        requestLogger.error({ error: err });
-      },
-    );
-  } catch (error: unknown) {
-    const parsedDuckDBError = parseDuckDBError(error);
-    
     requestLogger.error(parsedDuckDBError);
     return c.json({ error: parsedDuckDBError }, 500);
   }

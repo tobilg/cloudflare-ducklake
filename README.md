@@ -39,9 +39,10 @@ Currently it's **not possible** to use `wrangler dev` during local development. 
 DuckDB is exposed as a Hono.js-based API, that offers a few endpoints:
 
 * `GET /`: Will show a JSON welcome message
-* `GET /_health`: Enables potential container health checking (currently not used)
+* `GET /schema`: Returns the list of databases, schemas, tables, views, and columns visible to DuckDB as JSON
 * `POST /query`: Takes a `application/json` object body with a `query` property that contains the (encoded) SQL query. Returns the query result in `application/json` as well (see example above)
-* `POST /streaming-query`: Takes a `application/json` object body with a `query` property that contains the (encoded) SQL query. Returns the query result in `application/vnd.apache.arrow.stream` (Arrow data stream)
+
+> **Note:** DuckDB is driven through the async [`@duckdb/node-api`](https://www.npmjs.com/package/@duckdb/node-api) package. Row values are serialized via `getRowObjectsJson()`, so BigInts, decimals, dates, and timestamps come through as JSON-safe strings rather than native JS numbers.
 
 ### Securing the API
 You can generate a unique API Token, e.g. with a tool like [Strong Password Generator](https://1password.com/password-generator) NOTE: it needs to satisfy the requirements in [Hono's Bearer Auth Middleware](https://hono.dev/docs/middleware/builtin/bearer-auth) - namely satisfying this regex: `/[A-Za-z0-9._~+/-]+=*/`. 
@@ -151,10 +152,8 @@ The response should look like this:
     "o_orderkey": 1,
     "o_custkey": 370,
     "o_orderstatus": "O",
-    "o_totalprice": 172799.49,
-    "o_orderdate": {
-      "days": 9497
-    },
+    "o_totalprice": "172799.49",
+    "o_orderdate": "1996-01-02",
     "o_orderpriority": "5-LOW",
     "o_clerk": "Clerk#000000951",
     "o_shippriority": 0,
@@ -162,6 +161,8 @@ The response should look like this:
   }
 ]
 ```
+
+Note that DECIMAL / BIGINT columns come through as strings and DATE / TIMESTAMP columns as ISO-8601 strings — this matches `getRowObjectsJson()`'s JSON-safe behavior in `@duckdb/node-api`.
 
 ## Deployment with the additional R2 Data Catalog / Iceberg integration
 With the `v1.3.0` release of DuckDB, it became possible to connect to the R2 Data Catalog. This means that you can now also read Iceberg data from R2's Object Storage directly from a SQL statement issued by DuckDB.

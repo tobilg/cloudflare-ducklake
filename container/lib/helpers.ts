@@ -1,23 +1,23 @@
-export type RawDuckDBError = {
-  errno?: number;
-  code?: string;
-  errorType?: string;
-  stack?: string;
-};
-
 export type DuckDBError = {
   message: string;
   type: string;
-  code: string;
-  errno: number | string;
 };
 
+// Errors from @duckdb/node-api are standard Error instances whose message is
+// prefixed with the DuckDB error class, e.g. "Catalog Error: Table ...".
+// This extracts the prefix into `type` and leaves the original message intact.
+const ERROR_TYPE_PATTERN = /^([A-Z][A-Za-z]* Error): /;
+
 export const parseDuckDBError = (error: unknown): DuckDBError => {
-  const duckDBError = error as RawDuckDBError;
+  if (error instanceof Error) {
+    const match = error.message.match(ERROR_TYPE_PATTERN);
+    return {
+      message: error.message,
+      type: match?.[1] ?? 'Error',
+    };
+  }
   return {
-    message: duckDBError?.stack?.replace(/^Error: /, '') || 'Unknown error',
-    type: duckDBError?.errorType || 'Unknown type',
-    code: duckDBError?.code || 'Unknown code',
-    errno: duckDBError?.errno ||'Unknown errno',
-  } as DuckDBError;
+    message: typeof error === 'string' ? error : 'Unknown error',
+    type: 'Error',
+  };
 };

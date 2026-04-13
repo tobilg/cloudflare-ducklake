@@ -1,4 +1,4 @@
-import DuckDB from 'duckdb';
+import { type DuckDBConnection, DuckDBInstance, type Json } from '@duckdb/node-api';
 import Logger from './logger';
 import { filterQuery } from './queryFilter';
 
@@ -57,33 +57,31 @@ export interface Column {
   isNullable: boolean;
 }
 
-// Instantiate DuckDB
-const duckDB = new DuckDB.Database(':memory:');
+type Row = Record<string, Json>;
 
-// Create connection
-const connection = duckDB.connect();
+// Lazily created on the first initialize() call; see initialize() below.
+let instance: DuckDBInstance | undefined;
+let connection: DuckDBConnection | undefined;
 
-// Promisify query method
-export const query = (query: string, filteringEnabled = true): Promise<DuckDB.TableData> => {
-  return new Promise((resolve, reject) => {
-    connection.all(filterQuery(query, filteringEnabled), (err, res) => {
-      if (err) reject(err);
-      resolve(res);
-    });
-  });
-};
-
-export const streamingQuery = (query: string, filteringEnabled = true): Promise<DuckDB.IpcResultStreamIterator> => {
-  return connection.arrowIPCStream(filterQuery(query.replace(';', ''), filteringEnabled));
+export const query = async (sql: string, filteringEnabled = true): Promise<Row[]> => {
+  if (!connection) {
+    throw new Error('DuckDB connection is not initialized');
+  }
+  const reader = await connection.runAndReadAll(filterQuery(sql, filteringEnabled));
+  return reader.getRowObjectsJson() as Row[];
 };
 
 export const initialize = async () => {
-  // Load home directory
-  await query("SET temp_directory='/app/tmp';", false);
+  // Create the in-memory DuckDB instance and connection on first call.
+  instance ??= await DuckDBInstance.create(':memory:');
+  connection ??= await instance.connect();
 
-  // Disable auto install & auto load of known extensions
-  await query(`SET autoinstall_known_extensions = false;`, false);
-  await query(`SET autoload_known_extensions = false;`, false);
+  // Load home directory
+  await query("SET home_directory='/home/node';", false);
+
+  // // Disable auto install & auto load of known extensions
+  // await query(`SET autoinstall_known_extensions = false;`, false);
+  // await query(`SET autoload_known_extensions = false;`, false);
 
   // Load httpfs
   await query("LOAD '/app/extensions/httpfs.duckdb_extension';", false);
@@ -102,7 +100,7 @@ export const initialize = async () => {
 
   // Create R2 Data Catalog secret if env vars are set, and attach catalog
   if (process.env.R2_TOKEN && process.env.R2_ENDPOINT && process.env.R2_CATALOG) {
-    // Create secrets
+    // Create secret
     await query(
       `CREATE OR REPLACE SECRET r2_catalog_secret (TYPE ICEBERG, TOKEN '${process.env.R2_TOKEN}', ENDPOINT '${process.env.R2_ENDPOINT}');`,
       false,
@@ -142,19 +140,19 @@ export const initialize = async () => {
   }
 
   // Whether or not the global http metadata is used to cache HTTP metadata, see https://github.com/duckdb/duckdb/pull/5405
-  await query('SET enable_http_metadata_cache=true;', false);
+  //await query('SET enable_http_metadata_cache=true;', false);
 
   // Whether or not object cache is used to cache e.g. Parquet metadata
-  await query('SET enable_object_cache=true;', false);
+  //await query('SET enable_object_cache=true;', false);
 
   // Whether or not version guessing is enabled (Iceberg only!!)
-  //await query('SET unsafe_enable_version_guessing=true;', false);
+  await query('SET unsafe_enable_version_guessing=true;', false);
 
   // Lock the local file system, because using R2 for storage
   //await query("SET disabled_filesystems = 'LocalFileSystem';", false);
 
   // Lock the configuration
-  await query('SET lock_configuration=true;', false);
+  //await query('SET lock_configuration=true;', false);
 
   apiLogger.debug('Done initializing DuckDB');
 };
@@ -183,11 +181,38 @@ const getMetadata = async (): Promise<Database[]> => {
   // Column metadata query
   const columnsMetadataQuery = `SELECT database_name as databaseName, schema_name as schemaName, table_name as tableName, column_name as name, data_type as dataType, numeric_precision as precision, numeric_scale as scale, is_nullable as isNullable FROM duckdb_columns() WHERE internal = false ORDER BY database_name, schema_name, table_name, column_index`;
 
-  const databaseRaw = await query(databaseMetadataQuery, false);
-  const schemas = await query(schemaMetadataQuery, false);
-  const tables = await query(tablesMetadataQuery, false);
-  const views = await query(viewsMetadataQuery, false);
-  const columns = await query(columnsMetadataQuery, false);
+  const databaseRaw = (await query(databaseMetadataQuery, false)) as unknown as Array<{ databaseName: string }>;
+  const schemas = (await query(schemaMetadataQuery, false)) as unknown as Array<{
+    databaseName: string;
+    schemaName: string;
+  }>;
+  const tables = (await query(tablesMetadataQuery, false)) as unknown as Array<{
+    databaseName: string;
+    schemaName: string;
+    name: string;
+    hasPrimaryKey: boolean;
+    estimatedRowCount: number;
+    columnCount: number;
+    indexCount: number;
+    checkConstraintCount: number;
+    sql: string;
+  }>;
+  const views = (await query(viewsMetadataQuery, false)) as unknown as Array<{
+    databaseName: string;
+    schemaName: string;
+    name: string;
+    sql: string;
+  }>;
+  const columns = (await query(columnsMetadataQuery, false)) as unknown as Array<{
+    databaseName: string;
+    schemaName: string;
+    tableName: string;
+    name: string;
+    dataType: string;
+    precision: number;
+    scale: number;
+    isNullable: boolean;
+  }>;
 
   const databases = databaseRaw.map((database) => ({
     name: database.databaseName as string,

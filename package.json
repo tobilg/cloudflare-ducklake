@@ -13,18 +13,18 @@
     "lint:fix": "biome check src/ container/ --write"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.5",
+    "@biomejs/biome": "^2.4.11",
     "@types/bunyan": "^1.8.11",
     "@types/node": "^22.15.21",
     "typescript": "^5.9.3",
-    "wrangler": "^4.42.1"
+    "wrangler": "^4.82.1"
   },
   "dependencies": {
-    "@cloudflare/containers": "^0.0.28",
-    "@cloudflare/workers-types": "^4.20251008.0",
-    "@hono/node-server": "^1.19.5",
+    "@cloudflare/containers": "^0.3.0",
+    "@cloudflare/workers-types": "^4.20260413.1",
+    "@duckdb/node-api": "^1.5.1-r.2",
+    "@hono/node-server": "^1.19.14",
     "bunyan": "^1.8.15",
-    "duckdb": "^1.4.1",
-    "hono": "^4.9.10"
+    "hono": "^4.12.12"
   }
 }
